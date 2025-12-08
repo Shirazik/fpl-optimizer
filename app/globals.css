@@ -1,0 +1,400 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Design System: CSS Custom Properties ===== */
+:root {
+  /* Font Stacks */
+  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* Animation Timing */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 0.1s;
+  --duration-normal: 0.15s;
+  --duration-slow: 0.25s;
+  --duration-slower: 0.4s;
+
+  /* Breakpoints (for reference) */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+}
+
+/* ===== Dark Theme (Default) ===== */
+:root,
+[data-theme="dark"] {
+  /* Background Layers */
+  --bg-app: #1a1a1f;
+  --bg-sidebar: #1e1e24;
+  --bg-surface: #232329;
+  --bg-elevated: #2a2a32;
+  --bg-input: #2d2d35;
+
+  /* Text Hierarchy */
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #6b6b74;
+  --text-disabled: #4a4a52;
+
+  /* Accent Colors */
+  --accent-primary: #5e6ad2;
+  --accent-primary-hover: #6b77db;
+  --accent-purple: #9f7aea;
+  --accent-pink: #ed64a6;
+
+  /* Status Colors */
+  --status-green: #38a169;
+  --status-yellow: #f6ad55;
+  --status-red: #e53e3e;
+  --status-blue: #4299e1;
+  --status-purple: #9f7aea;
+
+  /* Fantasy Football: Team Status */
+  --status-win: #38a169;
+  --status-loss: #e53e3e;
+  --status-draw: #f6ad55;
+  --status-bye: #6b6b74;
+
+  /* Fantasy Football: Player Status */
+  --player-fit: #38a169;
+  --player-doubt: #f6ad55;
+  --player-injured: #e53e3e;
+  --player-suspended: #9f7aea;
+
+  /* Fantasy Football: Position Colors */
+  --pos-goalkeeper: #f6ad55;
+  --pos-defender: #4299e1;
+  --pos-midfielder: #38a169;
+  --pos-forward: #e53e3e;
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.15);
+
+  /* Focus Ring */
+  --focus-ring: rgba(94, 106, 210, 0.4);
+}
+
+/* ===== Light Theme ===== */
+[data-theme="light"] {
+  /* Background Layers */
+  --bg-app: #f5f5f7;
+  --bg-sidebar: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f0f0f2;
+  --bg-input: #e8e8ec;
+
+  /* Text Hierarchy */
+  --text-primary: #1a1a1f;
+  --text-secondary: #6b6b74;
+  --text-tertiary: #9ca3af;
+  --text-disabled: #d1d5db;
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.15);
+
+  /* Focus Ring */
+  --focus-ring: rgba(94, 106, 210, 0.3);
+}
+
+/* ===== Base Styles ===== */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Component Utilities ===== */
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-2 rounded text-body-sm font-medium cursor-pointer transition-all duration-normal;
+  }
+
+  .btn-primary {
+    background: var(--accent-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-primary-hover);
+  }
+
+  .btn-secondary {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default);
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-input);
+    color: var(--text-primary);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-tertiary);
+  }
+
+  .btn-ghost:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+
+  /* Input Fields */
+  .input {
+    @apply w-full px-3 py-2 rounded text-body;
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    color: var(--text-primary);
+    transition: all var(--duration-normal) ease;
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+
+  .input::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg-surface);
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .card-elevated {
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-caption font-medium;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+  }
+
+  .badge-green {
+    color: var(--status-green);
+    background: rgba(56, 161, 105, 0.15);
+  }
+
+  .badge-yellow {
+    color: var(--status-yellow);
+    background: rgba(246, 173, 85, 0.15);
+  }
+
+  .badge-red {
+    color: var(--status-red);
+    background: rgba(229, 62, 62, 0.15);
+  }
+
+  .badge-blue {
+    color: var(--status-blue);
+    background: rgba(66, 153, 225, 0.15);
+  }
+
+  .badge-purple {
+    color: var(--status-purple);
+    background: rgba(159, 122, 234, 0.15);
+  }
+
+  /* Position Badges */
+  .badge-gk {
+    color: var(--pos-goalkeeper);
+    background: rgba(246, 173, 85, 0.15);
+  }
+
+  .badge-def {
+    color: var(--pos-defender);
+    background: rgba(66, 153, 225, 0.15);
+  }
+
+  .badge-mid {
+    color: var(--pos-midfielder);
+    background: rgba(56, 161, 105, 0.15);
+  }
+
+  .badge-fwd {
+    color: var(--pos-forward);
+    background: rgba(229, 62, 62, 0.15);
+  }
+
+  /* Pill (outline style) */
+  .pill {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-overline;
+    background: transparent;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+  }
+
+  /* Stat display (monospace) */
+  .stat {
+    font-family: var(--font-mono);
+    font-weight: 500;
+  }
+
+  .stat-lg {
+    font-family: var(--font-mono);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  /* Text utilities */
+  .text-label {
+    @apply text-caption uppercase tracking-wide;
+    color: var(--text-tertiary);
+  }
+
+  /* Hover lift effect */
+  .hover-lift {
+    transition: transform var(--duration-slow) var(--ease-out),
+                box-shadow var(--duration-slow) var(--ease-out);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Loading spinner */
+  .spinner {
+    @apply w-5 h-5 border-2 rounded-full animate-spin;
+    border-color: var(--border-default);
+    border-top-color: var(--accent-primary);
+  }
+
+  .spinner-lg {
+    @apply w-8 h-8 border-2 rounded-full animate-spin;
+    border-color: var(--border-default);
+    border-top-color: var(--accent-primary);
+  }
+
+  /* ===== Pitch Layout Specific ===== */
+
+  /* Pitch player positioning */
+  .pitch-player {
+    @apply absolute transform -translate-x-1/2 -translate-y-1/2;
+    @apply transition-all duration-200;
+    will-change: transform;
+  }
+
+  .pitch-player:hover {
+    @apply -translate-y-2;
+    transform: translate(-50%, calc(-50% - 0.5rem));
+  }
+
+  /* Pitch player circle */
+  .pitch-player-circle {
+    @apply w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16;
+    @apply rounded-full border-2 shadow-sm;
+    border-color: var(--border-strong);
+    transition: all 0.2s var(--ease-out);
+  }
+
+  .pitch-player:hover .pitch-player-circle {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: scale(1.05);
+  }
+
+  /* Captain/Vice badges on pitch */
+  .pitch-badge-captain {
+    @apply absolute -top-1 -right-1 w-5 h-5 rounded-full;
+    @apply text-black text-xs font-bold;
+    @apply flex items-center justify-center;
+    background: var(--status-yellow);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Pitch SVG lines */
+  .pitch-line {
+    @apply fill-none;
+    stroke: var(--border-default);
+    stroke-width: 0.4;
+    opacity: 0.6;
+  }
+
+  /* Pitch surface */
+  .pitch-surface {
+    fill: var(--bg-elevated);
+  }
+}
+
+/* ===== Utility Classes ===== */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Staggered animation delays */
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+  .animation-delay-500 {
+    animation-delay: 500ms;
+  }
+
+  /* Fill mode for animations */
+  .animation-fill-both {
+    animation-fill-mode: both;
+  }
+}
+
+/* ===== Scrollbar Styling (Dark Theme) ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-disabled);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* ===== Selection ===== */
+::selection {
+  background: rgba(94, 106, 210, 0.3);
+  color: var(--text-primary);
+}

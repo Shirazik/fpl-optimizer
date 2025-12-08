@@ -1,0 +1,66 @@
+// FPL Review Prediction Provider (Template)
+// Rename to fpl-review.ts and add your FPL Review API key to use
+
+import { BasePredictionProvider } from './base'
+import type { PlayerPrediction } from '@/types/predictions'
+
+export class FPLReviewProvider extends BasePredictionProvider {
+  name = 'fpl_review'
+  private apiKey: string
+
+  constructor(apiKey?: string) {
+    super()
+    this.apiKey = apiKey || process.env.FPL_REVIEW_API_KEY || ''
+
+    if (!this.apiKey) {
+      throw new Error('FPL Review API key is required')
+    }
+  }
+
+  async fetchPredictions(
+    gameweek: number,
+    horizon: number = 3
+  ): Promise<PlayerPrediction[]> {
+    // TODO: Implement actual FPL Review API integration
+    // This is a template - adjust based on FPL Review's actual API structure
+
+    const predictions: PlayerPrediction[] = []
+
+    try {
+      // Example API call (adjust URL and parameters based on actual API)
+      const response = await fetch(
+        `https://fplreview.com/api/predictions?gameweek=${gameweek}&horizon=${horizon}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error(`FPL Review API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      // Transform API response to PlayerPrediction format
+      // Adjust based on actual API response structure
+      for (const item of data) {
+        predictions.push({
+          player_id: item.player_id,
+          gameweek: item.gameweek,
+          expected_points: item.predicted_points,
+          confidence: 0.85,  // FPL Review has high accuracy
+          expected_minutes: item.expected_minutes,
+          source: this.name,
+        })
+      }
+
+      return this.filterValidPredictions(predictions)
+    } catch (error) {
+      console.error('Error fetching FPL Review predictions:', error)
+      throw error
+    }
+  }
+}

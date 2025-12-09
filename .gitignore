@@ -49,3 +49,9 @@ Thumbs.db
 
 # Claude-specific (optional - remove if you want to track this)
 claude.md
+
+# Python
+/venv/
+__pycache__/
+*.pyc
+*.pyo

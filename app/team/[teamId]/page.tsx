@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -15,8 +15,10 @@ import {
 } from 'lucide-react'
 import type { TeamAnalysis } from '@/types/fpl'
 import type { PlayerPrediction } from '@/types/predictions'
+import type { TransferSuggestion } from '@/types/optimization'
 import { SquadDisplay } from '@/components/team/squad-display'
 import { TeamStats } from '@/components/team/team-stats'
+import { TransferSuggestionsList } from '@/components/transfers'
 
 export default function TeamPage() {
   const params = useParams()
@@ -27,6 +29,19 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loadingPredictions, setLoadingPredictions] = useState(false)
+
+  // Transfer optimization state
+  const [showOptimization, setShowOptimization] = useState(false)
+  const [optimizing, setOptimizing] = useState(false)
+  const [optimizationError, setOptimizationError] = useState<string | null>(null)
+  const [transferSuggestions, setTransferSuggestions] = useState<TransferSuggestion[]>([])
+  const [optimizationResult, setOptimizationResult] = useState<{
+    total_transfers: number
+    point_hit: number
+    expected_points: number
+    free_transfers: number
+    horizon: number
+  } | null>(null)
 
   useEffect(() => {
     async function fetchTeamData() {
@@ -111,6 +126,47 @@ export default function TeamPage() {
       setLoadingPredictions(false)
     }
   }
+
+  const handleOptimizeTransfers = useCallback(async () => {
+    if (!teamId) return
+
+    try {
+      setOptimizing(true)
+      setOptimizationError(null)
+      setShowOptimization(true)
+
+      const response = await fetch('/api/optimize/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId,
+          maxTransfers: 2,
+          horizon: 3,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Optimization failed')
+      }
+
+      const data = await response.json()
+
+      setTransferSuggestions(data.transfers)
+      setOptimizationResult({
+        total_transfers: data.total_transfers,
+        point_hit: data.point_hit,
+        expected_points: data.expected_points,
+        free_transfers: data.free_transfers,
+        horizon: data.horizon,
+      })
+    } catch (err) {
+      console.error('Optimization error:', err)
+      setOptimizationError(err instanceof Error ? err.message : 'Optimization failed')
+    } finally {
+      setOptimizing(false)
+    }
+  }, [teamId])
 
   if (loading) {
     return (
@@ -215,9 +271,17 @@ export default function TeamPage() {
         {/* Action Buttons */}
         <section className="animate-slide-in-up animation-fill-both animation-delay-300">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <button className="btn btn-primary py-4 text-body font-semibold group">
-              <Zap className="w-5 h-5" />
-              Optimize Transfers
+            <button
+              onClick={handleOptimizeTransfers}
+              disabled={optimizing}
+              className="btn btn-primary py-4 text-body font-semibold group disabled:opacity-70"
+            >
+              {optimizing ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Zap className="w-5 h-5" />
+              )}
+              {optimizing ? 'Optimizing...' : 'Optimize Transfers'}
             </button>
             <button
               className="btn btn-secondary py-4 text-body font-semibold opacity-50 cursor-not-allowed"
@@ -237,6 +301,22 @@ export default function TeamPage() {
             </button>
           </div>
         </section>
+
+        {/* Transfer Optimization Results */}
+        {showOptimization && (
+          <section className="mt-8 animate-slide-in-up">
+            <TransferSuggestionsList
+              transfers={transferSuggestions}
+              totalTransfers={optimizationResult?.total_transfers || 0}
+              pointHit={optimizationResult?.point_hit || 0}
+              expectedPoints={optimizationResult?.expected_points || 0}
+              freeTransfers={optimizationResult?.free_transfers || 1}
+              horizon={optimizationResult?.horizon || 3}
+              isLoading={optimizing}
+              error={optimizationError}
+            />
+          </section>
+        )}
       </div>
     </div>
   )

@@ -146,6 +146,10 @@ export interface Player {
   selected_rank_type: number
   starts_per_90: number
   clean_sheets_per_90: number
+  chance_of_playing_next_round: number | null
+  chance_of_playing_this_round: number | null
+  news: string
+  news_added: string | null
 }
 
 export interface Position {

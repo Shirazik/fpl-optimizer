@@ -4,25 +4,26 @@ A powerful web application that helps you optimize your Fantasy Premier League t
 
 ## 🚀 Features
 
-### Current (Phase 1 - MVP)
+### Current (Phase 1 & 2)
 
 - **Team Analysis**: Enter your FPL team ID to view your current squad
 - **Expected Points**: See predicted points for each player based on form and fixtures
 - **Squad Visualization**: Interactive display of your starting XI and bench, organized by position
 - **Team Statistics**: View team value, bank balance, free transfers, and overall expected points
 - **Smart Caching**: Fast performance with intelligent API caching
+- **Transfer Optimization**: Get mathematically optimal transfer suggestions using MILP algorithms
+- **Point Hit Analysis**: See whether taking -4 point hits is worth it based on expected points gain
 
 ### Coming Soon
 
-- **Transfer Optimization** (Phase 2): Get mathematically optimal transfer suggestions using MILP algorithms
-- **Point Hit Analysis** (Phase 3): Calculate whether taking -4 or -8 point hits is worth it
+- **Multi-Transfer Comparison** (Phase 3): Side-by-side comparison of 0, 1, and 2 transfer scenarios
 - **Multi-Gameweek Planning** (Phase 4): Plan your transfers across multiple gameweeks
 - **Wildcard Optimizer** (Phase 5): Optimize your entire squad when using the wildcard chip
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 14 with TypeScript, Tailwind CSS
-- **Optimization** (Coming): Python with PuLP and HiGHS solver
+- **Frontend**: Next.js 16 with TypeScript, Tailwind CSS
+- **Optimization**: Python with PuLP and HiGHS MILP solver
 - **Database** (Coming): Supabase (PostgreSQL)
 - **Hosting**: Vercel
 
@@ -31,27 +32,35 @@ A powerful web application that helps you optimize your Fantasy Premier League t
 ### Prerequisites
 
 - Node.js 18+ and npm
+- Python 3.9+ (for transfer optimization)
 - Git
 
 ### Setup
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Shirazik/fpl-optimizer.git
    cd fpl-optimizer
    ```
 
-2. **Install dependencies**
+2. **Install Node.js dependencies**
    ```bash
    npm install
    ```
 
-3. **Run the development server**
+3. **Set up Python environment** (for transfer optimization)
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r python/requirements.txt
+   ```
+
+4. **Run the development server**
    ```bash
    npm run dev
    ```
 
-4. **Open your browser**
+5. **Open your browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ## 🎮 Usage
@@ -70,6 +79,17 @@ A powerful web application that helps you optimize your Fantasy Premier League t
 2. Click "Analyze Team"
 3. View your squad with expected points for each player
 4. See team statistics including value, bank, and free transfers
+
+### Optimizing Transfers
+
+1. After loading your team, click the "Optimize Transfers" button
+2. The MILP optimizer will calculate the best transfers based on:
+   - Expected points over the next 3 gameweeks
+   - Your available budget (including selling prices)
+   - Squad composition rules (positions, team limits)
+   - Point hit penalties for extra transfers
+3. View suggested transfers with expected point gains
+4. See warnings if a point hit is recommended
 
 ## 📊 How It Works
 
@@ -101,6 +121,33 @@ The app correctly implements FPL's **half-profit rule**:
 - If their price decreases, you get their current price
 - Example: Buy at £10.0m, rises to £10.4m → Selling price is £10.2m (half of £0.4m profit)
 
+### Transfer Optimization (MILP)
+
+The optimizer uses **Mixed Integer Linear Programming** to find mathematically optimal transfers:
+
+**Decision Variables:**
+- `x[player]` = 1 if player is in final squad
+- `t_in[player]` = 1 if player transferred in
+- `t_out[player]` = 1 if player transferred out
+
+**Objective Function:**
+```
+Maximize: Σ(expected_points × horizon_weight) - point_hit_penalty
+```
+
+**Constraints:**
+- Squad size = 15 players
+- Positions: 2 GK, 5 DEF, 5 MID, 3 FWD
+- Budget: Total cost ≤ available budget
+- Team limit: Max 3 players per Premier League team
+- Transfer balance: Players in = Players out
+
+**Horizon Weights:**
+Future gameweeks are weighted less heavily due to prediction uncertainty:
+```
+GW1: 1.0, GW2: 0.85, GW3: 0.7, GW4: 0.55, GW5: 0.4
+```
+
 ## 🗂️ Project Structure
 
 ```
@@ -110,12 +157,18 @@ fpl-optimizer/
 │   ├── team/[teamId]/     # Team analysis page
 │   └── api/               # API routes
 │       ├── fpl/           # FPL data endpoints
+│       ├── optimize/      # Transfer optimization endpoint
 │       └── predictions/   # Prediction endpoints
 ├── components/            # React components
-│   └── team/             # Team-related components
+│   ├── team/             # Team-related components
+│   └── transfers/        # Transfer suggestion components
 ├── lib/                  # Utility libraries
 │   ├── fpl-api.ts       # FPL API client
+│   ├── optimizer.ts     # Python script caller
 │   └── predictions/     # Prediction providers
+├── python/              # Python optimization scripts
+│   ├── optimize_transfers.py  # MILP transfer optimizer
+│   └── requirements.txt       # Python dependencies
 ├── types/               # TypeScript type definitions
 └── public/              # Static assets
 ```
@@ -243,15 +296,29 @@ GET /api/predictions?gameweek=XX&horizon=3&playerIds=1,2,3
 ```
 Returns expected points predictions for specified players.
 
+#### Optimize Transfers
+```
+POST /api/optimize/transfer
+Content-Type: application/json
+
+{
+  "teamId": "123456",
+  "maxTransfers": 2,
+  "horizon": 3
+}
+```
+Returns optimal transfer suggestions with expected point gains.
+
 ## 🔮 Roadmap
 
-### Phase 2: Transfer Optimization (Next)
+### Phase 2: Transfer Optimization ✅
 - Python MILP optimizer with PuLP and HiGHS
-- Single transfer suggestions
+- Single/multi transfer suggestions
 - Budget constraint handling
 - Position and team limits
+- Point hit analysis
 
-### Phase 3: Point Hit Analysis
+### Phase 3: Multi-Transfer Comparison (Next)
 - Multi-transfer optimization
 - -4 and -8 point hit calculations
 - Break-even analysis
@@ -305,6 +372,12 @@ Returns expected points predictions for specified players.
 **Expected points show as 0:**
 - Predictions are still loading
 - Check browser console for any API errors
+
+**Transfer optimization fails:**
+- Make sure Python 3.9+ is installed
+- Verify the virtual environment is set up: `source venv/bin/activate`
+- Check that dependencies are installed: `pip install -r python/requirements.txt`
+- Look at the browser console for detailed error messages
 
 ## 📄 License
 

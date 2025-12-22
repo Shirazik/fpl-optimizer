@@ -1,7 +1,8 @@
 {
-  "functions": {
-    "api/optimize-python.py": {
-      "runtime": "python@3.12"
+  "builds": [
+    {
+      "src": "api/optimize-python.py",
+      "use": "@vercel/python"
     }
-  }
+  ]
 }

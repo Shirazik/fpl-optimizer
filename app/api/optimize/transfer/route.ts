@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     }
 
     // Check position distribution
-    const positionCounts = { 1: 0, 2: 0, 3: 0, 4: 0 }
+    const positionCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 }
     for (const playerId of currentSquadIds) {
       const player = bootstrap.elements.find(p => p.id === playerId)
       if (player) {

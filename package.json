@@ -1,15 +1,34 @@
 {
-  "name": "fpl-app-workspace",
+  "name": "fpl-optimizer",
   "version": "1.0.0",
   "private": true,
-  "description": "FPL Optimizer workspace - Helper scripts for development",
+  "description": "FPL Optimizer - Transfer optimization tool using MILP",
+  "main": "index.js",
   "scripts": {
-    "dev": "cd fpl-optimizer && npm run dev",
-    "build": "cd fpl-optimizer && npm run build",
-    "start": "cd fpl-optimizer && npm run start",
-    "lint": "cd fpl-optimizer && npm run lint",
-    "install:deps": "cd fpl-optimizer && npm install",
-    "clean": "cd fpl-optimizer && rm -rf .next node_modules",
-    "setup:python": "cd fpl-optimizer && python3 -m venv venv && source venv/bin/activate && pip install -r python/requirements.txt"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "setup:python": "python3 -m venv venv && source venv/bin/activate && pip install -r python/requirements.txt"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "lucide-react": "^0.556.0",
+    "next": "^16.0.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.22",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "^16.0.6",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.9.3"
   }
 }

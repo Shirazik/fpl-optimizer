@@ -1,0 +1,10 @@
+# FPL Optimizer - Python Dependencies for Vercel Serverless Function
+# This file is used by Vercel to install dependencies for the Python serverless function
+
+# MILP Optimization
+pulp>=2.7.0           # Linear programming library
+highspy>=1.5.0        # HiGHS solver (fast, open-source MILP solver)
+
+# Data handling
+numpy>=1.24.0         # Numerical operations
+

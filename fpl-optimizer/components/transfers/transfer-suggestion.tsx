@@ -353,7 +353,7 @@ export function DualRecommendationDisplay({
         <h3 className="text-heading font-semibold text-text-primary mb-4">
           Transfer Recommendations
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="text-center">
             <p className="text-overline text-text-tertiary mb-1">FREE TRANSFERS</p>
             <p className="stat text-text-primary text-2xl">{conservative.free_transfers}</p>
@@ -361,18 +361,6 @@ export function DualRecommendationDisplay({
           <div className="text-center">
             <p className="text-overline text-text-tertiary mb-1">HORIZON</p>
             <p className="stat text-text-primary text-2xl">{conservative.horizon} GW</p>
-          </div>
-          <div className="text-center">
-            <p className="text-overline text-text-tertiary mb-1">RECOMMENDATION</p>
-            <p className={`text-sm font-medium ${
-              comparison.recommendation === 'optimal' ? 'text-status-green' :
-              comparison.recommendation === 'conservative' ? 'text-status-yellow' :
-              'text-text-secondary'
-            }`}>
-              {comparison.recommendation === 'optimal' ? 'Take the hit' :
-               comparison.recommendation === 'conservative' ? 'Play it safe' :
-               'Either works'}
-            </p>
           </div>
         </div>
 
@@ -392,6 +380,15 @@ export function DualRecommendationDisplay({
                 : undefined
             }
           >
+            <p className={`text-sm font-semibold mb-2 ${
+              comparison.recommendation === 'optimal' ? 'text-status-green' :
+              comparison.recommendation === 'conservative' ? 'text-status-yellow' :
+              'text-text-secondary'
+            }`}>
+              RECOMMENDATION {comparison.recommendation === 'optimal' ? 'Take the hit' :
+               comparison.recommendation === 'conservative' ? 'Play it safe' :
+               'Either works'}
+            </p>
             <p className="text-sm text-text-secondary">
               Taking {comparison.hit_transfers_count} extra transfer{comparison.hit_transfers_count > 1 ? 's' : ''}
               {' '}({Math.abs(optimal.point_hit)} point hit) yields{' '}

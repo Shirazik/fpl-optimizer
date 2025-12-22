@@ -12,7 +12,14 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs
 
 # Add python directory to path so we can import the optimizer
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
+# Handle both local development and Vercel deployment paths
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+python_dir = os.path.join(project_root, 'python')
+
+# Ensure the python directory is in the path
+if python_dir not in sys.path:
+    sys.path.insert(0, python_dir)
 
 from optimize_transfers import optimize_transfers
 

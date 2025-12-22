@@ -5,6 +5,40 @@ import path from 'path'
 import type { OptimizationParams, OptimizationResult } from '@/types/optimization'
 
 /**
+ * Check if running in Vercel serverless environment
+ */
+function isVercelEnvironment(): boolean {
+  return process.env.VERCEL === '1' || process.env.NOW_REGION !== undefined
+}
+
+/**
+ * Run optimizer using Vercel Python serverless function
+ */
+async function runWithVercelFunction(
+  params: OptimizationParams
+): Promise<OptimizationResult> {
+  // In Vercel, call the Python serverless function via internal fetch
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'http://localhost:3000'
+
+  const response = await fetch(`${baseUrl}/api/optimize-python`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(params),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Optimizer failed')
+  }
+
+  return response.json()
+}
+
+/**
  * Run the Python transfer optimizer script
  *
  * @param params - Optimization parameters including squad, players, budget, etc.
@@ -13,6 +47,12 @@ import type { OptimizationParams, OptimizationResult } from '@/types/optimizatio
 export async function runTransferOptimizer(
   params: OptimizationParams
 ): Promise<OptimizationResult> {
+  // Use Vercel Python serverless function in production
+  if (isVercelEnvironment()) {
+    return runWithVercelFunction(params)
+  }
+
+  // Local development: spawn Python process
   return new Promise((resolve, reject) => {
     // Path to the Python script
     const scriptPath = path.join(process.cwd(), 'python', 'optimize_transfers.py')

@@ -1,0 +1,27 @@
+# Vercel Ignore - Exclude files from deployment
+# See: https://vercel.com/docs/projects/project-configuration#vercelignore
+
+# Python virtual environment (not needed, Vercel builds its own)
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Development files
+.next/
+node_modules/
+
+# Local environment files
+.env*.local
+
+# IDE
+.vscode/
+.idea/
+
+# MacOS
+.DS_Store
+
+# Git
+.git/

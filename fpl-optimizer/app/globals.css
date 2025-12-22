@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Design System: CSS Custom Properties ===== */
+:root {
+  /* Font Stacks */
+  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* Animation Timing */
+  --duration-normal: 0.15s;
+}
+
+/* ===== Dark Theme Only ===== */
+:root {
+  /* Background Layers */
+  --bg-app: #1a1a1f;
+  --bg-sidebar: #1e1e24;
+  --bg-surface: #232329;
+  --bg-elevated: #2a2a32;
+  --bg-input: #2d2d35;
+
+  /* Text Hierarchy */
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #6b6b74;
+
+  /* Accent Colors */
+  --accent-primary: #5e6ad2;
+  --accent-primary-hover: #6b77db;
+
+  /* Status Colors */
+  --status-green: #38a169;
+  --status-yellow: #f6ad55;
+  --status-red: #e53e3e;
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+
+  /* Focus Ring */
+  --focus-ring: rgba(94, 106, 210, 0.4);
+}
+
+/* ===== Base Styles ===== */
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Component Utilities ===== */
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-2 rounded font-medium cursor-pointer transition-all;
+  }
+
+  .btn-primary {
+    background: var(--accent-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-primary-hover);
+  }
+
+  .btn-secondary {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default);
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-input);
+    color: var(--text-primary);
+  }
+
+  /* Input Fields */
+  .input {
+    @apply w-full px-3 py-2 rounded;
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    color: var(--text-primary);
+    transition: all var(--duration-normal) ease;
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+
+  .input::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg-surface);
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* Loading spinner */
+  .spinner {
+    @apply w-5 h-5 border-2 rounded-full animate-spin;
+    border-color: var(--border-default);
+    border-top-color: var(--accent-primary);
+  }
+}
+
+/* ===== Scrollbar Styling ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
+}
+
+/* ===== Selection ===== */
+::selection {
+  background: rgba(94, 106, 210, 0.3);
+  color: var(--text-primary);
+}

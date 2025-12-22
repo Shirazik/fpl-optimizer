@@ -1,0 +1,15 @@
+{
+  "name": "fpl-app-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FPL Optimizer workspace - Helper scripts for development",
+  "scripts": {
+    "dev": "cd fpl-optimizer && npm run dev",
+    "build": "cd fpl-optimizer && npm run build",
+    "start": "cd fpl-optimizer && npm run start",
+    "lint": "cd fpl-optimizer && npm run lint",
+    "install:deps": "cd fpl-optimizer && npm install",
+    "clean": "cd fpl-optimizer && rm -rf .next node_modules",
+    "setup:python": "cd fpl-optimizer && python3 -m venv venv && source venv/bin/activate && pip install -r python/requirements.txt"
+  }
+}

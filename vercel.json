@@ -5,14 +5,14 @@
       "use": "@vercel/next"
     },
     {
-      "src": "api/optimize-python.py",
+      "src": "python-api/optimize-python.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
-      "src": "/api/optimize-python",
-      "dest": "/api/optimize-python.py"
+      "src": "/python-api/optimize-python",
+      "dest": "/python-api/optimize-python.py"
     }
   ]
 }

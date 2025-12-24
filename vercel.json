@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/optimize-python.py": {
-      "runtime": "python3.9"
-    }
-  }
-}

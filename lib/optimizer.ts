@@ -22,7 +22,7 @@ async function runWithVercelFunction(
     ? `https://${process.env.VERCEL_URL}`
     : 'http://localhost:3000'
 
-  const response = await fetch(`${baseUrl}/python-api/optimize-python`, {
+  const response = await fetch(`${baseUrl}/api/optimize`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -30,9 +30,19 @@ async function runWithVercelFunction(
     body: JSON.stringify(params),
   })
 
+  // Check content-type before parsing to avoid "Unexpected token '<'" errors
+  const contentType = response.headers.get('content-type')
+
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Optimizer failed')
+    if (contentType?.includes('application/json')) {
+      const error = await response.json()
+      throw new Error(error.error || 'Optimizer failed')
+    }
+    throw new Error(`Optimizer returned ${response.status}: endpoint may not exist`)
+  }
+
+  if (!contentType?.includes('application/json')) {
+    throw new Error('Optimizer returned non-JSON response')
   }
 
   return response.json()

@@ -22,7 +22,7 @@ async function runWithVercelFunction(
     ? `https://${process.env.VERCEL_URL}`
     : 'http://localhost:3000'
 
-  const response = await fetch(`${baseUrl}/api/optimize`, {
+  const response = await fetch(`${baseUrl}/api/optimize/transfer`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

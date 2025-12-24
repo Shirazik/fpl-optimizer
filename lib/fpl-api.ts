@@ -12,6 +12,13 @@ import type {
 
 const FPL_API_BASE = 'https://fantasy.premierleague.com/api'
 
+// Default headers for FPL API requests
+const FPL_API_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json',
+  'Accept-Language': 'en-US,en;q=0.9',
+}
+
 // Cache for bootstrap data (updates once per gameweek)
 let bootstrapCache: {
   data: FPLBootstrapStatic | null
@@ -28,19 +35,47 @@ const CACHE_DURATION = 24 * 60 * 60 * 1000  // 24 hours in milliseconds
  * This is cached for 24 hours as it only updates once per gameweek
  */
 export async function fetchBootstrap(forceRefresh = false): Promise<FPLBootstrapStatic> {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:30',message:'fetchBootstrap entry',data:{forceRefresh,hasCache:!!bootstrapCache.data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const now = Date.now()
 
   // Return cached data if fresh
   if (!forceRefresh && bootstrapCache.data && (now - bootstrapCache.timestamp) < CACHE_DURATION) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:35',message:'fetchBootstrap using cache',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     return bootstrapCache.data
   }
 
+  const url = `${FPL_API_BASE}/bootstrap-static/`
+  const fetchOptions = { 
+    cache: 'force-cache' as RequestCache,
+    headers: FPL_API_HEADERS
+  }
+  // #region agent log
+  const logData1 = {location:'fpl-api.ts:39',message:'fetchBootstrap before fetch',data:{url,options:fetchOptions,headers:Object.keys(fetchOptions).join(',')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+  console.log('[DEBUG]', JSON.stringify(logData1));
+  fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData1)}).catch(()=>{});
+  // #endregion
+
   try {
-    const response = await fetch(`${FPL_API_BASE}/bootstrap-static/`, {
-      cache: 'force-cache'
-    })
+    const response = await fetch(url, fetchOptions)
+
+    // #region agent log
+    const responseHeaders: Record<string, string> = {}
+    response.headers.forEach((v, k) => { responseHeaders[k] = v })
+    const logData2 = {location:'fpl-api.ts:43',message:'fetchBootstrap after fetch',data:{status:response.status,statusText:response.statusText,ok:response.ok,responseHeaders},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+    console.log('[DEBUG]', JSON.stringify(logData2));
+    fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(()=>{});
+    // #endregion
 
     if (!response.ok) {
+      // #region agent log
+      const logData3 = {location:'fpl-api.ts:44',message:'fetchBootstrap response not ok',data:{status:response.status,statusText:response.statusText,url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
+      console.error('[DEBUG ERROR]', JSON.stringify(logData3));
+      fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(()=>{});
+      // #endregion
       throw new Error(`FPL API error: ${response.status} ${response.statusText}`)
     }
 
@@ -54,6 +89,9 @@ export async function fetchBootstrap(forceRefresh = false): Promise<FPLBootstrap
 
     return data
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:66',message:'fetchBootstrap catch error',data:{error:error instanceof Error ? error.message : String(error),errorType:error instanceof Error ? error.constructor.name : typeof error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     console.error('Error fetching bootstrap data:', error)
 
     // Return cached data if available, even if stale
@@ -88,17 +126,39 @@ export async function getNextGameweek(): Promise<number> {
  * Fetch all fixtures
  */
 export async function fetchFixtures(): Promise<Fixture[]> {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:90',message:'fetchFixtures entry',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  const url = `${FPL_API_BASE}/fixtures/`
+  const fetchOptions = { 
+    cache: 'force-cache' as RequestCache,
+    headers: FPL_API_HEADERS
+  }
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:92',message:'fetchFixtures before fetch',data:{url,options:fetchOptions},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
+
   try {
-    const response = await fetch(`${FPL_API_BASE}/fixtures/`, {
-      cache: 'force-cache'
-    })
+    const response = await fetch(url, fetchOptions)
+
+    // #region agent log
+    const responseHeaders: Record<string, string> = {}
+    response.headers.forEach((v, k) => { responseHeaders[k] = v })
+    fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:96',message:'fetchFixtures after fetch',data:{status:response.status,statusText:response.statusText,ok:response.ok,responseHeaders},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     if (!response.ok) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:97',message:'fetchFixtures response not ok',data:{status:response.status,statusText:response.statusText,url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       throw new Error(`FPL API error: ${response.status} ${response.statusText}`)
     }
 
     return await response.json()
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:115',message:'fetchFixtures catch error',data:{error:error instanceof Error ? error.message : String(error),errorType:error instanceof Error ? error.constructor.name : typeof error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     console.error('Error fetching fixtures:', error)
     throw error
   }
@@ -116,12 +176,37 @@ export async function fetchGameweekFixtures(gameweek: number): Promise<Fixture[]
  * Fetch manager/entry summary data
  */
 export async function fetchManagerEntry(teamId: string): Promise<ManagerEntry> {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:118',message:'fetchManagerEntry entry',data:{teamId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  const url = `${FPL_API_BASE}/entry/${teamId}/`
+  const fetchOptions = { 
+    cache: 'default' as RequestCache,
+    headers: FPL_API_HEADERS
+  }
+  // #region agent log
+  const logData1 = {location:'fpl-api.ts:120',message:'fetchManagerEntry before fetch',data:{url,options:fetchOptions},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+  console.log('[DEBUG]', JSON.stringify(logData1));
+  fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData1)}).catch(()=>{});
+  // #endregion
+
   try {
-    const response = await fetch(`${FPL_API_BASE}/entry/${teamId}/`, {
-      cache: 'default'
-    })
+    const response = await fetch(url, fetchOptions)
+
+    // #region agent log
+    const responseHeaders: Record<string, string> = {}
+    response.headers.forEach((v, k) => { responseHeaders[k] = v })
+    const logData2 = {location:'fpl-api.ts:124',message:'fetchManagerEntry after fetch',data:{status:response.status,statusText:response.statusText,ok:response.ok,responseHeaders},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+    console.log('[DEBUG]', JSON.stringify(logData2));
+    fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(()=>{});
+    // #endregion
 
     if (!response.ok) {
+      // #region agent log
+      const logData3 = {location:'fpl-api.ts:125',message:'fetchManagerEntry response not ok',data:{status:response.status,statusText:response.statusText,url,teamId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
+      console.error('[DEBUG ERROR]', JSON.stringify(logData3));
+      fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(()=>{});
+      // #endregion
       if (response.status === 404) {
         throw new Error('Team not found. Please check the team ID.')
       }
@@ -133,6 +218,9 @@ export async function fetchManagerEntry(teamId: string): Promise<ManagerEntry> {
 
     return await response.json()
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:146',message:'fetchManagerEntry catch error',data:{error:error instanceof Error ? error.message : String(error),errorType:error instanceof Error ? error.constructor.name : typeof error,teamId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     console.error('Error fetching manager entry:', error)
     throw error
   }
@@ -142,20 +230,45 @@ export async function fetchManagerEntry(teamId: string): Promise<ManagerEntry> {
  * Fetch manager's picks for a specific gameweek
  */
 export async function fetchManagerPicks(teamId: string, gameweek: number): Promise<ManagerPicks> {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:144',message:'fetchManagerPicks entry',data:{teamId,gameweek},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  const url = `${FPL_API_BASE}/entry/${teamId}/event/${gameweek}/picks/`
+  const fetchOptions = { 
+    cache: 'default' as RequestCache,
+    headers: FPL_API_HEADERS
+  }
+  // #region agent log
+  const logData1 = {location:'fpl-api.ts:146',message:'fetchManagerPicks before fetch',data:{url,options:fetchOptions},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+  console.log('[DEBUG]', JSON.stringify(logData1));
+  fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData1)}).catch(()=>{});
+  // #endregion
+
   try {
-    const response = await fetch(
-      `${FPL_API_BASE}/entry/${teamId}/event/${gameweek}/picks/`,
-      {
-        cache: 'default'
-      }
-    )
+    const response = await fetch(url, fetchOptions)
+
+    // #region agent log
+    const responseHeaders: Record<string, string> = {}
+    response.headers.forEach((v, k) => { responseHeaders[k] = v })
+    const logData2 = {location:'fpl-api.ts:153',message:'fetchManagerPicks after fetch',data:{status:response.status,statusText:response.statusText,ok:response.ok,responseHeaders},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+    console.log('[DEBUG]', JSON.stringify(logData2));
+    fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(()=>{});
+    // #endregion
 
     if (!response.ok) {
+      // #region agent log
+      const logData3 = {location:'fpl-api.ts:154',message:'fetchManagerPicks response not ok',data:{status:response.status,statusText:response.statusText,url,teamId,gameweek},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
+      console.error('[DEBUG ERROR]', JSON.stringify(logData3));
+      fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(()=>{});
+      // #endregion
       throw new Error(`FPL API error: ${response.status} ${response.statusText}`)
     }
 
     return await response.json()
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:172',message:'fetchManagerPicks catch error',data:{error:error instanceof Error ? error.message : String(error),errorType:error instanceof Error ? error.constructor.name : typeof error,teamId,gameweek},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     console.error('Error fetching manager picks:', error)
     throw error
   }
@@ -165,17 +278,39 @@ export async function fetchManagerPicks(teamId: string, gameweek: number): Promi
  * Fetch manager's transfer history
  */
 export async function fetchTransferHistory(teamId: string): Promise<Transfer[]> {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:167',message:'fetchTransferHistory entry',data:{teamId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  const url = `${FPL_API_BASE}/entry/${teamId}/transfers/`
+  const fetchOptions = { 
+    cache: 'default' as RequestCache,
+    headers: FPL_API_HEADERS
+  }
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:169',message:'fetchTransferHistory before fetch',data:{url,options:fetchOptions},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
+
   try {
-    const response = await fetch(`${FPL_API_BASE}/entry/${teamId}/transfers/`, {
-      cache: 'default'
-    })
+    const response = await fetch(url, fetchOptions)
+
+    // #region agent log
+    const responseHeaders: Record<string, string> = {}
+    response.headers.forEach((v, k) => { responseHeaders[k] = v })
+    fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:173',message:'fetchTransferHistory after fetch',data:{status:response.status,statusText:response.statusText,ok:response.ok,responseHeaders},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     if (!response.ok) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:174',message:'fetchTransferHistory response not ok',data:{status:response.status,statusText:response.statusText,url,teamId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       throw new Error(`FPL API error: ${response.status} ${response.statusText}`)
     }
 
     return await response.json()
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:192',message:'fetchTransferHistory catch error',data:{error:error instanceof Error ? error.message : String(error),errorType:error instanceof Error ? error.constructor.name : typeof error,teamId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     console.error('Error fetching transfer history:', error)
     throw error
   }

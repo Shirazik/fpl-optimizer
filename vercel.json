@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/optimize.py": {
-      "runtime": "python3.12"
-    }
-  }
-}

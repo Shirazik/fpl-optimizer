@@ -11,6 +11,7 @@ function isVercelEnvironment(): boolean {
   return process.env.VERCEL === '1' || process.env.NOW_REGION !== undefined
 }
 
+
 /**
  * Run optimizer using Vercel Python serverless function
  */
@@ -18,11 +19,12 @@ async function runWithVercelFunction(
   params: OptimizationParams
 ): Promise<OptimizationResult> {
   // In Vercel, call the Python serverless function via internal fetch
+  // The Python function is at /api/optimize (matching api/optimize.py)
   const baseUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : 'http://localhost:3000'
 
-  const response = await fetch(`${baseUrl}/api/optimize/transfer`, {
+  const response = await fetch(`${baseUrl}/api/optimize`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -38,11 +40,13 @@ async function runWithVercelFunction(
       const error = await response.json()
       throw new Error(error.error || 'Optimizer failed')
     }
-    throw new Error(`Optimizer returned ${response.status}: endpoint may not exist`)
+    const errorText = await response.text().catch(() => 'Unknown error')
+    throw new Error(`Optimizer returned ${response.status}: ${errorText.substring(0, 200)}`)
   }
 
   if (!contentType?.includes('application/json')) {
-    throw new Error('Optimizer returned non-JSON response')
+    const text = await response.text().catch(() => 'Non-JSON response')
+    throw new Error(`Optimizer returned non-JSON response: ${text.substring(0, 200)}`)
   }
 
   return response.json()
@@ -57,7 +61,8 @@ async function runWithVercelFunction(
 export async function runTransferOptimizer(
   params: OptimizationParams
 ): Promise<OptimizationResult> {
-  // Use Vercel Python serverless function in production
+  // In Vercel, use the Python serverless function
+  // The Python function should be at /api/optimize (matching api/optimize.py)
   if (isVercelEnvironment()) {
     return runWithVercelFunction(params)
   }

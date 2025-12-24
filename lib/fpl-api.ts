@@ -17,6 +17,8 @@ const FPL_API_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Accept': 'application/json',
   'Accept-Language': 'en-US,en;q=0.9',
+  'Referer': 'https://fantasy.premierleague.com/',
+  'Origin': 'https://fantasy.premierleague.com',
 }
 
 // Cache for bootstrap data (updates once per gameweek)
@@ -50,11 +52,11 @@ export async function fetchBootstrap(forceRefresh = false): Promise<FPLBootstrap
 
   const url = `${FPL_API_BASE}/bootstrap-static/`
   const fetchOptions = { 
-    cache: 'force-cache' as RequestCache,
-    headers: FPL_API_HEADERS
+    headers: FPL_API_HEADERS,
+    next: { revalidate: 3600 } // Revalidate every hour instead of force-cache
   }
   // #region agent log
-  const logData1 = {location:'fpl-api.ts:39',message:'fetchBootstrap before fetch',data:{url,options:fetchOptions,headers:Object.keys(fetchOptions).join(',')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+  const logData1 = {location:'fpl-api.ts:39',message:'fetchBootstrap before fetch',data:{url,options:fetchOptions,headers:FPL_API_HEADERS,headersKeys:Object.keys(fetchOptions)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
   console.log('[DEBUG]', JSON.stringify(logData1));
   fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData1)}).catch(()=>{});
   // #endregion
@@ -72,7 +74,13 @@ export async function fetchBootstrap(forceRefresh = false): Promise<FPLBootstrap
 
     if (!response.ok) {
       // #region agent log
-      const logData3 = {location:'fpl-api.ts:44',message:'fetchBootstrap response not ok',data:{status:response.status,statusText:response.statusText,url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
+      let errorBody = '';
+      try {
+        errorBody = await response.text();
+      } catch (e) {
+        errorBody = 'Could not read error body';
+      }
+      const logData3 = {location:'fpl-api.ts:44',message:'fetchBootstrap response not ok',data:{status:response.status,statusText:response.statusText,url,errorBody:errorBody.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
       console.error('[DEBUG ERROR]', JSON.stringify(logData3));
       fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(()=>{});
       // #endregion
@@ -131,8 +139,8 @@ export async function fetchFixtures(): Promise<Fixture[]> {
   // #endregion
   const url = `${FPL_API_BASE}/fixtures/`
   const fetchOptions = { 
-    cache: 'force-cache' as RequestCache,
-    headers: FPL_API_HEADERS
+    headers: FPL_API_HEADERS,
+    next: { revalidate: 3600 } // Revalidate every hour instead of force-cache
   }
   // #region agent log
   fetch('http://127.0.0.1:7242/ingest/f141b307-52cd-40dd-bce7-33bd443aab97',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fpl-api.ts:92',message:'fetchFixtures before fetch',data:{url,options:fetchOptions},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});

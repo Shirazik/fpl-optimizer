@@ -11,41 +11,71 @@ function isVercelEnvironment(): boolean {
   return process.env.VERCEL === '1' || process.env.NOW_REGION !== undefined
 }
 
+
 /**
  * Run optimizer using Vercel Python serverless function
+ * In Vercel, Python files in api/ are accessible at /api/{filename} (without .py extension)
  */
 async function runWithVercelFunction(
   params: OptimizationParams
 ): Promise<OptimizationResult> {
-  // In Vercel, call the Python serverless function via internal fetch
+  // In Vercel, use the deployment URL. For local dev, use localhost
   const baseUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
+    : process.env.NEXT_PUBLIC_VERCEL_URL
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
     : 'http://localhost:3000'
 
-  const response = await fetch(`${baseUrl}/api/optimize/transfer`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(params),
-  })
+  // Try /api/optimize first (Vercel auto-routes api/optimize.py to /api/optimize)
+  // If that fails, try /api/optimize.py as fallback
+  let response: Response
+  let lastError: Error | null = null
 
-  // Check content-type before parsing to avoid "Unexpected token '<'" errors
-  const contentType = response.headers.get('content-type')
+  for (const endpoint of ['/api/optimize', '/api/optimize.py']) {
+    try {
+      response = await fetch(`${baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      })
 
-  if (!response.ok) {
-    if (contentType?.includes('application/json')) {
-      const error = await response.json()
-      throw new Error(error.error || 'Optimizer failed')
+      if (response.ok) {
+        const contentType = response.headers.get('content-type')
+        if (!contentType?.includes('application/json')) {
+          const text = await response.text().catch(() => 'Non-JSON response')
+          throw new Error(`Optimizer returned non-JSON response: ${text.substring(0, 200)}`)
+        }
+        return response.json()
+      }
+
+      // If 404, try next endpoint
+      if (response.status === 404 && endpoint === '/api/optimize') {
+        continue
+      }
+
+      // For other errors, try to get error message
+      const contentType = response.headers.get('content-type')
+      if (contentType?.includes('application/json')) {
+        const error = await response.json()
+        throw new Error(error.error || 'Optimizer failed')
+      }
+      const errorText = await response.text().catch(() => 'Unknown error')
+      throw new Error(`Optimizer returned ${response.status}: ${errorText.substring(0, 200)}`)
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      // If this was the first endpoint and it's a 404, try the second one
+      if (endpoint === '/api/optimize' && error instanceof Error && error.message.includes('404')) {
+        continue
+      }
+      // Otherwise, re-throw
+      throw error
     }
-    throw new Error(`Optimizer returned ${response.status}: endpoint may not exist`)
   }
 
-  if (!contentType?.includes('application/json')) {
-    throw new Error('Optimizer returned non-JSON response')
-  }
-
-  return response.json()
+  // If we get here, both endpoints failed
+  throw lastError || new Error('Failed to call Python optimizer')
 }
 
 /**
@@ -57,7 +87,8 @@ async function runWithVercelFunction(
 export async function runTransferOptimizer(
   params: OptimizationParams
 ): Promise<OptimizationResult> {
-  // Use Vercel Python serverless function in production
+  // In Vercel, use the Python serverless function
+  // The Python function should be at /api/optimize (matching api/optimize.py)
   if (isVercelEnvironment()) {
     return runWithVercelFunction(params)
   }

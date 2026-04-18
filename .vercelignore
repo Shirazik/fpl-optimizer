@@ -4,6 +4,9 @@
 # Python virtual environment (not needed, Vercel builds its own)
 venv/
 
+# Local-only Python CLI script (Vercel uses api/optimize.py instead)
+python/
+
 # Python cache
 __pycache__/
 *.pyc

@@ -1,12 +1,6 @@
-# FPL Optimizer - Python Dependencies
-# Phase 2: Transfer Optimization
-
-# MILP Optimization
-pulp>=2.7.0           # Linear programming library
-highspy>=1.5.0        # HiGHS solver (fast, open-source MILP solver)
-
-# Data handling
-numpy>=1.24.0         # Numerical operations
-
-# JSON handling (stdlib, but included for clarity)
-# json is built-in
+# FPL Optimizer - Python Dependencies (local development)
+#
+# Matches api/requirements.txt so the local CLI script and the Vercel
+# serverless function behave identically.
+pulp>=2.8.0,<3.0
+highspy>=1.5.0,<2.0

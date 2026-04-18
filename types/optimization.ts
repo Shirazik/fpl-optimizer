@@ -7,6 +7,7 @@ export interface OptimizationParams {
   bank: number  // Available cash in bank
   free_transfers: number
   horizon?: number  // Planning horizon (gameweeks)
+  max_transfers?: number  // Upper bound on transfers the optimizer may make
 }
 
 export interface OptimizationPlayer {

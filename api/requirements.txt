@@ -1,8 +1,7 @@
-# FPL Optimizer - Python Dependencies for Vercel Serverless Function
-
-# MILP Optimization
-pulp>=2.7.0           # Linear programming library
-highspy>=1.5.0        # HiGHS solver (fast, open-source MILP solver)
-
-# Data handling
-numpy>=1.24.0         # Numerical operations
+# FPL Optimizer - Python Dependencies for the Vercel Serverless Function.
+#
+# Versions are pinned to the range known to work on Vercel's Python 3.12
+# runtime. pulp.HiGHS (the class) was added in pulp 2.8.0, so we require
+# at least that. highspy provides cp312 manylinux wheels from 1.5+.
+pulp>=2.8.0,<3.0
+highspy>=1.5.0,<2.0

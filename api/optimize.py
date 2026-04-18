@@ -12,7 +12,7 @@ to find optimal transfers for Fantasy Premier League teams.
 
 import json
 from http.server import BaseHTTPRequestHandler
-from typing import Any
+from typing import Any, Optional
 
 import pulp
 
@@ -88,7 +88,7 @@ def optimize_transfers(
     free_transfers: int,
     horizon: int = 3,
     max_transfers: int = 2,
-    bank: float = None,
+    bank: Optional[float] = None,
 ) -> dict[str, Any]:
     """
     Find optimal transfers using MILP optimization.
@@ -231,12 +231,17 @@ def optimize_transfers(
     # 9. Point hits
     prob += hits >= num_transfers - free_transfers, "Hits_Lower_Bound"
 
-    # Solve
+    # Solve. HiGHS is the only solver guaranteed to be installable as a
+    # pure-Python wheel on Vercel's Python runtime; CBC requires a system
+    # binary that isn't present in the serverless image, so we don't fall
+    # back to it here.
     try:
-        import highspy
         solver = pulp.HiGHS(msg=0, timeLimit=30)
-    except (ImportError, Exception):
-        solver = pulp.getSolver("PULP_CBC_CMD", msg=0, timeLimit=30)
+    except Exception as solver_error:  # pragma: no cover - environment specific
+        raise RuntimeError(
+            f"HiGHS solver unavailable: {solver_error}. "
+            "Ensure highspy is installed in the serverless environment."
+        ) from solver_error
 
     prob.solve(solver)
 

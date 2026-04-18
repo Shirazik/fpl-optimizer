@@ -7,215 +7,156 @@ import type { OptimizationParams, OptimizationResult } from '@/types/optimizatio
 /**
  * Check if running in Vercel serverless environment
  */
-function isVercelEnvironment(): boolean {
+export function isVercelEnvironment(): boolean {
   return process.env.VERCEL === '1' || process.env.NOW_REGION !== undefined
 }
 
+/**
+ * Resolve the base URL we should use to self-invoke the Python function on Vercel.
+ * Prefers the full origin header when the caller has a Request, falls back to
+ * Vercel's env hints, then to localhost for dev.
+ */
+function resolveVercelBaseUrl(originHeader?: string | null): string {
+  if (originHeader && /^https?:\/\//i.test(originHeader)) return originHeader
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  if (process.env.NEXT_PUBLIC_VERCEL_URL) return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+  return 'http://localhost:3000'
+}
 
 /**
- * Run optimizer using Vercel Python serverless function
- * In Vercel, Python files in api/ are accessible at /api/{filename} (without .py extension)
+ * Call the Python serverless function (Vercel production path).
+ *
+ * Notes:
+ *  - Tries /api/optimize first; falls back to /api/optimize.py.
+ *  - If Vercel Deployment Protection intercepts the call it returns an HTML
+ *    SSO page. We detect that and surface a clear error instead of the
+ *    confusing "Unexpected token <" JSON-parse failure.
+ *  - Honors VERCEL_AUTOMATION_BYPASS_SECRET if provided, so operators can
+ *    bypass protection for this specific self-call.
  */
-async function runWithVercelFunction(
-  params: OptimizationParams
+export async function callPythonOptimizer(
+  params: OptimizationParams,
+  { originHeader }: { originHeader?: string | null } = {},
 ): Promise<OptimizationResult> {
-  // In Vercel, use the deployment URL. For local dev, use localhost
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_VERCEL_URL
-    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-    : 'http://localhost:3000'
+  const baseUrl = resolveVercelBaseUrl(originHeader)
+  const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
 
-  // Try /api/optimize first (Vercel auto-routes api/optimize.py to /api/optimize)
-  // If that fails, try /api/optimize.py as fallback
-  let response: Response
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (bypass) headers['x-vercel-protection-bypass'] = bypass
+
   let lastError: Error | null = null
-
   for (const endpoint of ['/api/optimize', '/api/optimize.py']) {
-    try {
-      response = await fetch(`${baseUrl}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      })
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    })
 
-      if (response.ok) {
-        const contentType = response.headers.get('content-type')
-        if (!contentType?.includes('application/json')) {
-          const text = await response.text().catch(() => 'Non-JSON response')
-          throw new Error(`Optimizer returned non-JSON response: ${text.substring(0, 200)}`)
-        }
-        return response.json()
-      }
-
-      // If 404, try next endpoint
-      if (response.status === 404 && endpoint === '/api/optimize') {
-        continue
-      }
-
-      // For other errors, try to get error message
-      const contentType = response.headers.get('content-type')
-      if (contentType?.includes('application/json')) {
-        const error = await response.json()
-        throw new Error(error.error || 'Optimizer failed')
-      }
-      const errorText = await response.text().catch(() => 'Unknown error')
-      throw new Error(`Optimizer returned ${response.status}: ${errorText.substring(0, 200)}`)
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error))
-      // If this was the first endpoint and it's a 404, try the second one
-      if (endpoint === '/api/optimize' && error instanceof Error && error.message.includes('404')) {
-        continue
-      }
-      // Otherwise, re-throw
-      throw error
+    if (response.status === 404 && endpoint === '/api/optimize') {
+      continue
     }
+
+    const contentType = response.headers.get('content-type') || ''
+    const isJson = contentType.includes('application/json')
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '')
+      if (looksLikeHtmlAuthPage(body, contentType)) {
+        throw new Error(
+          'Vercel Deployment Protection intercepted the internal /api/optimize call ' +
+          '(received an HTML sign-in page instead of JSON). Disable protection for this ' +
+          'project or set VERCEL_AUTOMATION_BYPASS_SECRET in the function environment.'
+        )
+      }
+      if (isJson) {
+        try {
+          const payload = JSON.parse(body) as { error?: string }
+          lastError = new Error(payload.error || `Optimizer returned ${response.status}`)
+        } catch {
+          lastError = new Error(`Optimizer returned ${response.status}: ${body.substring(0, 200)}`)
+        }
+      } else {
+        lastError = new Error(`Optimizer returned ${response.status}: ${body.substring(0, 200)}`)
+      }
+      continue
+    }
+
+    if (!isJson) {
+      const text = await response.text().catch(() => '')
+      if (looksLikeHtmlAuthPage(text, contentType)) {
+        throw new Error(
+          'Vercel Deployment Protection is blocking the internal /api/optimize call.'
+        )
+      }
+      throw new Error(`Optimizer returned non-JSON response: ${text.substring(0, 200)}`)
+    }
+
+    return response.json() as Promise<OptimizationResult>
   }
 
-  // If we get here, both endpoints failed
   throw lastError || new Error('Failed to call Python optimizer')
 }
 
-/**
- * Run the Python transfer optimizer script
- *
- * @param params - Optimization parameters including squad, players, budget, etc.
- * @returns Promise with optimization result
- */
-export async function runTransferOptimizer(
-  params: OptimizationParams
-): Promise<OptimizationResult> {
-  // In Vercel, use the Python serverless function
-  // The Python function should be at /api/optimize (matching api/optimize.py)
-  if (isVercelEnvironment()) {
-    return runWithVercelFunction(params)
-  }
-
-  // Local development: spawn Python process
-  return new Promise((resolve, reject) => {
-    // Path to the Python script
-    const scriptPath = path.join(process.cwd(), 'python', 'optimize_transfers.py')
-    const venvPython = path.join(process.cwd(), 'venv', 'bin', 'python')
-
-    // Try venv Python first, fall back to system python3
-    const pythonPath = process.platform === 'win32'
-      ? path.join(process.cwd(), 'venv', 'Scripts', 'python.exe')
-      : venvPython
-
-    // Spawn Python process
-    const pythonProcess = spawn(pythonPath, [scriptPath], {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        PYTHONUNBUFFERED: '1'  // Ensure output isn't buffered
-      }
-    })
-
-    let stdout = ''
-    let stderr = ''
-
-    // Collect stdout
-    pythonProcess.stdout.on('data', (data: Buffer) => {
-      stdout += data.toString()
-    })
-
-    // Collect stderr
-    pythonProcess.stderr.on('data', (data: Buffer) => {
-      stderr += data.toString()
-    })
-
-    // Handle process completion
-    pythonProcess.on('close', (code: number | null) => {
-      if (code !== 0) {
-        console.error('Python optimizer stderr:', stderr)
-        reject(new Error(`Optimizer failed with code ${code}: ${stderr || 'Unknown error'}`))
-        return
-      }
-
-      try {
-        const result = JSON.parse(stdout) as OptimizationResult
-
-        // Check for error in result
-        if ('error' in result) {
-          reject(new Error(result.error as string))
-          return
-        }
-
-        resolve(result)
-      } catch (parseError) {
-        console.error('Failed to parse optimizer output:', stdout)
-        reject(new Error(`Failed to parse optimizer output: ${parseError}`))
-      }
-    })
-
-    // Handle spawn errors
-    pythonProcess.on('error', (error: Error) => {
-      // If venv Python fails, try system Python
-      if (error.message.includes('ENOENT')) {
-        runWithSystemPython(params, scriptPath)
-          .then(resolve)
-          .catch(reject)
-      } else {
-        reject(new Error(`Failed to start optimizer: ${error.message}`))
-      }
-    })
-
-    // Send input data to Python script
-    const inputJson = JSON.stringify(params)
-    pythonProcess.stdin.write(inputJson)
-    pythonProcess.stdin.end()
-  })
+function looksLikeHtmlAuthPage(body: string, contentType: string): boolean {
+  if (contentType.includes('text/html')) return true
+  const head = body.slice(0, 200).toLowerCase()
+  return head.includes('<html') || head.includes('vercel sso') || head.includes('sign in')
 }
 
 /**
- * Fallback: Run optimizer with system Python
+ * Run the Python transfer optimizer.
+ * Uses the Vercel serverless function in production and spawns the local
+ * script during development.
  */
-async function runWithSystemPython(
+export async function runTransferOptimizer(
   params: OptimizationParams,
-  scriptPath: string
 ): Promise<OptimizationResult> {
+  if (isVercelEnvironment()) {
+    return callPythonOptimizer(params)
+  }
+
   return new Promise((resolve, reject) => {
-    const pythonProcess = spawn('python3', [scriptPath], {
+    const scriptPath = path.join(process.cwd(), 'python', 'optimize_transfers.py')
+    const venvPython = process.platform === 'win32'
+      ? path.join(process.cwd(), 'venv', 'Scripts', 'python.exe')
+      : path.join(process.cwd(), 'venv', 'bin', 'python')
+
+    const pythonProcess = spawn(venvPython, [scriptPath], {
       cwd: process.cwd(),
-      env: {
-        ...process.env,
-        PYTHONUNBUFFERED: '1'
-      }
+      env: { ...process.env, PYTHONUNBUFFERED: '1' },
     })
 
     let stdout = ''
     let stderr = ''
 
-    pythonProcess.stdout.on('data', (data: Buffer) => {
-      stdout += data.toString()
-    })
+    pythonProcess.stdout.on('data', (data: Buffer) => { stdout += data.toString() })
+    pythonProcess.stderr.on('data', (data: Buffer) => { stderr += data.toString() })
 
-    pythonProcess.stderr.on('data', (data: Buffer) => {
-      stderr += data.toString()
-    })
-
-    pythonProcess.on('close', (code: number | null) => {
+    pythonProcess.on('close', (code: number | null, signal: NodeJS.Signals | null) => {
       if (code !== 0) {
-        reject(new Error(`Optimizer failed: ${stderr || 'Unknown error'}`))
+        if (stderr) console.error('Python optimizer stderr:', stderr)
+        const suffix = signal ? ` (signal ${signal})` : ''
+        reject(new Error(`Optimizer exited with code ${code}${suffix}: ${stderr || 'unknown error'}`))
         return
       }
-
       try {
-        const result = JSON.parse(stdout) as OptimizationResult
-        if ('error' in result) {
-          reject(new Error(result.error as string))
+        const result = JSON.parse(stdout) as OptimizationResult & { error?: string }
+        if (result.error) {
+          reject(new Error(result.error))
           return
         }
         resolve(result)
-      } catch {
-        reject(new Error(`Failed to parse optimizer output: ${stdout}`))
+      } catch (parseError) {
+        reject(new Error(`Failed to parse optimizer output: ${String(parseError)}\n${stdout.slice(0, 500)}`))
       }
     })
 
-    pythonProcess.on('error', (error: Error) => {
-      reject(new Error(`Python not found. Please ensure Python 3 is installed: ${error.message}`))
+    pythonProcess.on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') {
+        runWithSystemPython(params, scriptPath).then(resolve).catch(reject)
+      } else {
+        reject(new Error(`Failed to start optimizer: ${error.message}`))
+      }
     })
 
     pythonProcess.stdin.write(JSON.stringify(params))
@@ -224,39 +165,62 @@ async function runWithSystemPython(
 }
 
 /**
- * Format transfer suggestion for display
+ * Fallback: run the optimizer with system Python if the venv interpreter
+ * isn't available.
  */
-export function formatTransferSuggestion(
-  playerOut: { name: string; price: number; expected_points: number },
-  playerIn: { name: string; price: number; expected_points: number }
-): string {
-  const priceChange = playerIn.price - playerOut.price
-  const priceChangeStr = priceChange >= 0 ? `+£${priceChange.toFixed(1)}m` : `-£${Math.abs(priceChange).toFixed(1)}m`
-  const epGain = playerIn.expected_points - playerOut.expected_points
+function runWithSystemPython(
+  params: OptimizationParams,
+  scriptPath: string,
+): Promise<OptimizationResult> {
+  return new Promise((resolve, reject) => {
+    const pythonProcess = spawn('python3', [scriptPath], {
+      cwd: process.cwd(),
+      env: { ...process.env, PYTHONUNBUFFERED: '1' },
+    })
 
-  return `${playerOut.name} → ${playerIn.name} (${priceChangeStr}, +${epGain.toFixed(1)} xP)`
+    let stdout = ''
+    let stderr = ''
+
+    pythonProcess.stdout.on('data', (data: Buffer) => { stdout += data.toString() })
+    pythonProcess.stderr.on('data', (data: Buffer) => { stderr += data.toString() })
+
+    pythonProcess.on('close', (code: number | null) => {
+      if (code !== 0) {
+        reject(new Error(`Optimizer failed: ${stderr || 'unknown error'}`))
+        return
+      }
+      try {
+        const result = JSON.parse(stdout) as OptimizationResult & { error?: string }
+        if (result.error) {
+          reject(new Error(result.error))
+          return
+        }
+        resolve(result)
+      } catch {
+        reject(new Error(`Failed to parse optimizer output: ${stdout.slice(0, 500)}`))
+      }
+    })
+
+    pythonProcess.on('error', (error: Error) => {
+      reject(new Error(`Python 3 not found: ${error.message}`))
+    })
+
+    pythonProcess.stdin.write(JSON.stringify(params))
+    pythonProcess.stdin.end()
+  })
 }
 
 /**
- * Check if the optimizer is available
+ * Format a transfer suggestion for display.
  */
-export async function isOptimizerAvailable(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const venvPython = path.join(process.cwd(), 'venv', 'bin', 'python')
-
-    const checkProcess = spawn(venvPython, ['-c', 'import pulp; print("ok")'], {
-      cwd: process.cwd()
-    })
-
-    checkProcess.on('close', (code) => {
-      resolve(code === 0)
-    })
-
-    checkProcess.on('error', () => {
-      // Try system Python
-      const systemCheck = spawn('python3', ['-c', 'import pulp; print("ok")'])
-      systemCheck.on('close', (code) => resolve(code === 0))
-      systemCheck.on('error', () => resolve(false))
-    })
-  })
+export function formatTransferSuggestion(
+  playerOut: { name: string; price: number; expected_points: number },
+  playerIn: { name: string; price: number; expected_points: number },
+): string {
+  const priceChange = playerIn.price - playerOut.price
+  const priceChangeStr = priceChange >= 0
+    ? `+£${priceChange.toFixed(1)}m`
+    : `-£${Math.abs(priceChange).toFixed(1)}m`
+  const epGain = playerIn.expected_points - playerOut.expected_points
+  return `${playerOut.name} → ${playerIn.name} (${priceChangeStr}, +${epGain.toFixed(1)} xP)`
 }

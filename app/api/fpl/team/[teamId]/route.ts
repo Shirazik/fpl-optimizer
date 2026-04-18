@@ -4,10 +4,12 @@ import {
   fetchManagerPicks,
   fetchBootstrap,
   getCurrentGameweek,
+  getNextGameweek,
   enrichPlayer,
   getPurchasePrices,
   calculateSellingPrice,
 } from '@/lib/fpl-api'
+import { calculateFreeTransfers } from '@/lib/fpl-rules'
 import type { TeamAnalysis, SquadPlayer } from '@/types/fpl'
 
 export async function GET(
@@ -26,13 +28,16 @@ export async function GET(
     }
 
     // Fetch data in parallel
-    const [manager, bootstrap, currentGW] = await Promise.all([
+    const [manager, bootstrap, currentGW, nextGW] = await Promise.all([
       fetchManagerEntry(teamId),
       fetchBootstrap(),
       getCurrentGameweek(),
+      getNextGameweek(),
     ])
 
+    const planningGW = nextGW > 1 ? nextGW : currentGW
     const picks = await fetchManagerPicks(teamId, currentGW)
+    const freeTransfers = await calculateFreeTransfers(teamId, planningGW)
 
     // Get purchase prices for selling price calculation
     let purchasePrices: Map<number, number>
@@ -76,9 +81,7 @@ export async function GET(
       squad,
       bank: picks.entry_history.bank / 10,  // Convert to £m
       team_value: picks.entry_history.value / 10,  // Convert to £m
-      free_transfers: picks.entry_history.event_transfers === 0
-        ? Math.min(2, (manager.last_deadline_total_transfers === 0 ? 1 : 0) + 1)
-        : 1,  // Simplified FT calculation
+      free_transfers: freeTransfers,
       current_gameweek: currentGW,
       total_expected_points: 0,  // Will be calculated after adding predictions
     }
